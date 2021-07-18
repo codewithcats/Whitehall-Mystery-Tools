@@ -103,10 +103,33 @@ generate_shuffle_indexes =
 
 view : Model -> Html Msg
 view (Model discovery_locations) =
-    div []
-        [ Buttons.with_leading_icon
+    div [ Attr.class "h-screen flex flex-col items-center pt-16" ]
+        [ h3 [ Attr.class "font-light" ] [ text "Whitehall Mystery Tools" ]
+        , h1 [ Attr.class "text-lg text-center font-semibold mb-8" ]
+            [ text "Discovery Location Randomizer" ]
+        , Buttons.with_leading_icon
             [ onClick RandomClicked ]
             Icons.dice
             "Random"
-        , p [] [ text <| String.join " " <| List.map String.fromInt <| Array.toList discovery_locations ]
+        , ul
+            [ Attr.class "mt-16 flex space-x-8"
+            , Attr.class "transform transition duration-700"
+            , Attr.classList
+                [ ( "translate-y-0 opacity-1", Array.length discovery_locations == 4 )
+                , ( "-translate-y-8 opacity-0", Array.length discovery_locations /= 4 )
+                ]
+            ]
+            (Array.toList <|
+                Array.map
+                    (\location ->
+                        li
+                            [ Attr.class "w-10 h-10 bg-gray-100"
+                            , Attr.class "flex items-center justify-center"
+                            , Attr.class "rounded-full ring-8 ring-gray-100 ring-offset-2 ring-offset-gray-500"
+                            , Attr.class "text-gray-600"
+                            ]
+                            [ text <| String.fromInt location ]
+                    )
+                    discovery_locations
+            )
         ]
