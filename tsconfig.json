@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2018",
+    "jsx": "preserve",
+    "strictFunctionTypes": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "node"
+  },
+  "exclude": ["node_modules", "**/node_modules/*"]
+}
