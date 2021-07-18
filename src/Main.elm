@@ -1,44 +1,44 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, button, div, text)
-import Html.Events exposing (onClick)
+import Html exposing (Html)
+import Platform.Cmd exposing (Cmd)
 import RandomDiscoveryLocation
 
 
-type alias Model =
-    { count : Int }
+type Model
+    = Model RandomDiscoveryLocation.Model
 
 
-initialModel : Model
-initialModel =
-    { count = 0 }
+init : () -> ( Model, Cmd Msg )
+init _ =
+    RandomDiscoveryLocation.init
+        |> Tuple.mapBoth Model (Cmd.map RandomDiscoveryLocationMsg)
 
 
 type Msg
-    = Increment
-    | Decrement
+    = RandomDiscoveryLocationMsg RandomDiscoveryLocation.Msg
 
 
-update : Msg -> Model -> Model
-update msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg (Model random_discovery_location) =
     case msg of
-        Increment ->
-            { model | count = model.count + 1 }
-
-        Decrement ->
-            { model | count = model.count - 1 }
+        RandomDiscoveryLocationMsg r_msg ->
+            RandomDiscoveryLocation.update r_msg random_discovery_location
+                |> Tuple.mapBoth Model (Cmd.map RandomDiscoveryLocationMsg)
 
 
 view : Model -> Html Msg
-view model =
-    RandomDiscoveryLocation.view
+view (Model random_discovery_location) =
+    RandomDiscoveryLocation.view random_discovery_location
+        |> Html.map RandomDiscoveryLocationMsg
 
 
 main : Program () Model Msg
 main =
-    Browser.sandbox
-        { init = initialModel
+    Browser.element
+        { init = init
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }
