@@ -1,44 +1,72 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html)
+import Browser.Navigation
+import Game
+import Html
 import Platform.Cmd exposing (Cmd)
 import RandomDiscoveryLocation
+import Url
 
 
-type Model
-    = Model RandomDiscoveryLocation.Model
+type State
+    = RandomDiscoveryLocation RandomDiscoveryLocation.Model
+    | Game Game.Model
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+type alias Model =
+    { key : Browser.Navigation.Key
+    , state : State
+    }
+
+
+init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init _ url key =
     RandomDiscoveryLocation.init
-        |> Tuple.mapBoth Model (Cmd.map RandomDiscoveryLocationMsg)
+        |> Tuple.mapBoth
+            (RandomDiscoveryLocation >> Model key)
+            (Cmd.map RandomDiscoveryLocationMsg)
 
 
 type Msg
     = RandomDiscoveryLocationMsg RandomDiscoveryLocation.Msg
+    | UrlRequested Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg (Model random_discovery_location) =
-    case msg of
-        RandomDiscoveryLocationMsg r_msg ->
-            RandomDiscoveryLocation.update r_msg random_discovery_location
-                |> Tuple.mapBoth Model (Cmd.map RandomDiscoveryLocationMsg)
+update msg ({ state, key } as model) =
+    case ( state, msg ) of
+        ( RandomDiscoveryLocation r_model, RandomDiscoveryLocationMsg r_msg ) ->
+            RandomDiscoveryLocation.update r_msg r_model
+                |> Tuple.mapBoth (RandomDiscoveryLocation >> Model key) (Cmd.map RandomDiscoveryLocationMsg)
+
+        _ ->
+            ( model, Cmd.none )
 
 
-view : Model -> Html Msg
-view (Model random_discovery_location) =
-    RandomDiscoveryLocation.view random_discovery_location
-        |> Html.map RandomDiscoveryLocationMsg
+view : Model -> Browser.Document Msg
+view { state } =
+    { title = "Whitehall Mystery"
+    , body =
+        [ case state of
+            RandomDiscoveryLocation r_model ->
+                RandomDiscoveryLocation.view r_model
+                    |> Html.map RandomDiscoveryLocationMsg
+
+            Game game_model ->
+                Game.view game_model
+        ]
+    }
 
 
 main : Program () Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
+        , onUrlRequest = UrlRequested
+        , onUrlChange = UrlChanged
         }
