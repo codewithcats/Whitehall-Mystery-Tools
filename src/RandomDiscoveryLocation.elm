@@ -46,12 +46,17 @@ locations =
 
 
 type Model
-    = Model (Array.Array Int)
+    = Model State (Array.Array Int)
+
+
+type State
+    = Idle
+    | ReadyToPlay
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model (Array.fromList []), Cmd.none )
+    ( Model Idle (Array.fromList []), Cmd.none )
 
 
 type Msg
@@ -61,7 +66,7 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ((Model discovery_locations) as model) =
+update msg (Model state discovery_locations) =
     case msg of
         RandomClicked ->
             Tuple.mapSecond (always <| Cmd.batch <| List.indexedMap generate_next_location <| Array.toList locations) init
@@ -74,7 +79,7 @@ update msg ((Model discovery_locations) as model) =
                         |> Maybe.withDefault -1
                         |> (\location_number -> Array.push location_number discovery_locations)
             in
-            ( Model updated_discovery_locations
+            ( Model state updated_discovery_locations
             , if Array.length updated_discovery_locations == 4 then
                 generate_shuffle_indexes
 
@@ -83,7 +88,7 @@ update msg ((Model discovery_locations) as model) =
             )
 
         ShuffleIndexesReceived indexes ->
-            ( Model (ArrayX.shuffle indexes discovery_locations), Cmd.none )
+            ( Model ReadyToPlay (ArrayX.shuffle indexes discovery_locations), Cmd.none )
 
 
 generate_next_location : Int -> Array.Array Int -> Cmd Msg
@@ -102,7 +107,7 @@ generate_shuffle_indexes =
 
 
 view : Model -> Html Msg
-view (Model discovery_locations) =
+view (Model state discovery_locations) =
     div [ Attr.class "h-screen flex flex-col items-center pt-16" ]
         [ h3 [ Attr.class "font-light" ] [ text "Whitehall Mystery Tools" ]
         , h1 [ Attr.class "text-lg text-center font-semibold mb-8" ]
@@ -111,25 +116,41 @@ view (Model discovery_locations) =
             [ onClick RandomClicked ]
             Icons.dice
             "Random"
-        , ul
-            [ Attr.class "mt-16 flex space-x-8"
-            , Attr.class "transform transition duration-700"
+        , div
+            [ Attr.class "transform transition duration-700"
+            , Attr.class "flex flex-col items-center"
+            , Attr.class "rounded bg-gray-200 py-4 px-8 mt-16"
             , Attr.classList
                 [ ( "translate-y-0 opacity-1", Array.length discovery_locations == 4 )
                 , ( "-translate-y-8 opacity-0", Array.length discovery_locations /= 4 )
                 ]
             ]
-            (Array.toList <|
-                Array.map
-                    (\location ->
-                        li
-                            [ Attr.class "w-10 h-10 bg-gray-100"
-                            , Attr.class "flex items-center justify-center"
-                            , Attr.class "rounded-full ring-8 ring-gray-100 ring-offset-2 ring-offset-gray-500"
-                            , Attr.class "text-gray-600"
-                            ]
-                            [ text <| String.fromInt location ]
-                    )
-                    discovery_locations
-            )
+            [ ul
+                [ Attr.class "mt-8 flex space-x-8"
+                ]
+                (Array.toList <|
+                    Array.map
+                        (\location ->
+                            li
+                                [ Attr.class "w-10 h-10 bg-gray-100"
+                                , Attr.class "flex items-center justify-center"
+                                , Attr.class "rounded-full ring-8 ring-gray-100 ring-offset-2 ring-offset-gray-500"
+                                , Attr.class "text-gray-600"
+                                ]
+                                [ text <| String.fromInt location ]
+                        )
+                        discovery_locations
+                )
+            , div
+                [ Attr.classList [ ( "hidden", state /= ReadyToPlay ) ]
+                , Attr.class "mt-8 flex flex-col items-center"
+                ]
+                [ Buttons.with_leading_icon [] Icons.play_solid "Start"
+                , p [ Attr.class "font-light italic text-gray-500 mt-2" ]
+                    [ text "or try "
+                    , span [ Attr.class "font-medium" ] [ text "Random" ]
+                    , text " again"
+                    ]
+                ]
+            ]
         ]
