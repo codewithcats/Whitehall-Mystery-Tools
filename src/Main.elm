@@ -6,7 +6,9 @@ import Game
 import Html
 import Platform.Cmd exposing (Cmd)
 import RandomDiscoveryLocation
+import Route
 import Url
+import Url.Parser
 
 
 type State
@@ -22,6 +24,18 @@ type alias Model =
 
 init : () -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init _ url key =
+    Url.Parser.parse Route.route_parser url
+        |> Maybe.map
+            (\parsed ->
+                case parsed of
+                    Route.RandomDiscoveryLocation ->
+                        init_with_random_discovery_location key
+            )
+        |> Maybe.withDefault (init_with_random_discovery_location key)
+
+
+init_with_random_discovery_location : Browser.Navigation.Key -> ( Model, Cmd Msg )
+init_with_random_discovery_location key =
     RandomDiscoveryLocation.init
         |> Tuple.mapBoth
             (RandomDiscoveryLocation >> Model key)
