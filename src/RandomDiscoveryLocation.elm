@@ -13,7 +13,7 @@ import Random
 
 top_left_locations : Array.Array Int
 top_left_locations =
-    List.concat [ List.range 1 3, List.range 8 18, List.range 28 36, List.range 48 55, List.range 68 72 ]
+    List.concat [ List.range 1 3, List.range 8 18, List.range 28 36, List.range 48 55, [ 68, 69, 71, 72 ] ]
         |> Array.fromList
 
 
