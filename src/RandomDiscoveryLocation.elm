@@ -13,7 +13,7 @@ import Random
 
 top_left_locations : Array.Array Int
 top_left_locations =
-    List.concat [ List.range 1 3, List.range 8 18, List.range 28 36, List.range 48 55, List.range 68 72 ]
+    List.concat [ List.range 1 3, List.range 8 18, List.range 28 36, List.range 48 55, [ 68, 69, 71, 72 ] ]
         |> Array.fromList
 
 
@@ -46,17 +46,34 @@ locations =
 
 
 type Model
-    = Model State (Array.Array Int)
+    = Model State ModelData
 
 
 type State
     = Idle
     | ReadyToPlay
 
+type alias ModelData =
+    { current_random_index : Int
+    , discovery_locations : Array.Array (Array.Array Int)
+    , choices_count : Int
+    }
+
 
 init : ( Model, Cmd Msg )
 init =
-    ( Model Idle (Array.fromList []), Cmd.none )
+    ( Model Idle
+        { current_random_index = 0
+        , discovery_locations =
+            Array.fromList
+                [ Array.empty
+                , Array.empty
+                , Array.empty
+                ]
+        , choices_count = 3
+        }
+    , Cmd.none
+    )
 
 
 type Msg
@@ -66,21 +83,29 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg (Model state discovery_locations) =
+update msg ((Model state model_data) ) =
     case msg of
         RandomClicked ->
             Tuple.mapSecond (always <| Cmd.batch <| List.indexedMap generate_next_location <| Array.toList locations) init
 
         RandomLocationReceived index location_index ->
             let
-                updated_discovery_locations =
+                updated_choice =
                     Array.get index locations
                         |> Maybe.andThen (Array.get location_index)
                         |> Maybe.withDefault -1
-                        |> (\location_number -> Array.push location_number discovery_locations)
+                        |> (\location_number ->
+                                Array.push location_number
+                                    (Array.get model_data.current_random_index model_data.discovery_locations
+                                        |> Maybe.withDefault (Array.fromList [])
+                                    )
+                           )
+
+                updated_discovery_locations =
+                    Array.set model_data.current_random_index updated_choice model_data.discovery_locations
             in
-            ( Model state updated_discovery_locations
-            , if Array.length updated_discovery_locations == 4 then
+            ( Model state { model_data | discovery_locations = updated_discovery_locations }
+            , if Array.length updated_choice == 4 then
                 generate_shuffle_indexes
 
               else
@@ -88,7 +113,27 @@ update msg (Model state discovery_locations) =
             )
 
         ShuffleIndexesReceived indexes ->
-            ( Model ReadyToPlay (ArrayX.shuffle indexes discovery_locations), Cmd.none )
+            let
+                updated_choice =
+                    ArrayX.shuffle indexes
+                        (Array.get model_data.current_random_index model_data.discovery_locations
+                            |> Maybe.withDefault Array.empty
+                        )
+
+                updated_discovery_locations =
+                    Array.set model_data.current_random_index updated_choice model_data.discovery_locations
+            in
+            ( Model
+                state { model_data
+                    | discovery_locations = updated_discovery_locations
+                    , current_random_index = model_data.current_random_index + 1
+                }
+            , if model_data.current_random_index == 2 then
+                Cmd.none
+
+              else
+                Cmd.batch <| List.indexedMap generate_next_location <| Array.toList locations
+            )
 
 
 generate_next_location : Int -> Array.Array Int -> Cmd Msg
@@ -107,7 +152,7 @@ generate_shuffle_indexes =
 
 
 view : Model -> Html Msg
-view (Model state discovery_locations) =
+view (Model state model_data) =
     div [ Attr.class "h-screen flex flex-col items-center pt-16" ]
         [ h3 [ Attr.class "font-light" ] [ text "Whitehall Mystery Tools" ]
         , h1 [ Attr.class "text-lg text-center font-semibold mb-8" ]
@@ -116,31 +161,6 @@ view (Model state discovery_locations) =
             [ onClick RandomClicked ]
             Icons.dice
             "Random"
-        , div
-            [ Attr.class "transform transition duration-700"
-            , Attr.class "flex flex-col items-center"
-            , Attr.class "rounded bg-gray-200 py-4 px-8 mt-16"
-            , Attr.classList
-                [ ( "translate-y-0 opacity-1", Array.length discovery_locations == 4 )
-                , ( "-translate-y-8 opacity-0", Array.length discovery_locations /= 4 )
-                ]
-            ]
-            [ ul
-                [ Attr.class "mt-8 flex space-x-8"
-                ]
-                (Array.toList <|
-                    Array.map
-                        (\location ->
-                            li
-                                [ Attr.class "w-10 h-10 bg-gray-100"
-                                , Attr.class "flex items-center justify-center"
-                                , Attr.class "rounded-full ring-8 ring-gray-100 ring-offset-2 ring-offset-gray-500"
-                                , Attr.class "text-gray-600"
-                                ]
-                                [ text <| String.fromInt location ]
-                        )
-                        discovery_locations
-                )
             , div
                 [ Attr.classList [ ( "hidden", state /= ReadyToPlay ) ]
                 , Attr.class "mt-8 flex flex-col items-center"
@@ -152,5 +172,31 @@ view (Model state discovery_locations) =
                     , text " again"
                     ]
                 ]
+        , div []
+            (Array.map view_choice model_data.discovery_locations |> Array.toList)
+        ]
+
+
+view_choice : Array.Array Int -> Html msg
+view_choice choice =
+    ul
+        [ Attr.class "mt-16 flex space-x-8"
+        , Attr.class "transform transition duration-700"
+        , Attr.classList
+            [ ( "translate-y-0 opacity-1", Array.length choice == 4 )
+            , ( "-translate-y-8 opacity-0", Array.length choice /= 4 )
             ]
         ]
+        (Array.toList <|
+            Array.map
+                (\location ->
+                    li
+                        [ Attr.class "w-10 h-10 bg-gray-100"
+                        , Attr.class "flex items-center justify-center"
+                        , Attr.class "rounded-full ring-8 ring-gray-100 ring-offset-2 ring-offset-gray-500"
+                        , Attr.class "text-gray-600"
+                        ]
+                        [ text <| String.fromInt location ]
+                )
+                choice
+        )

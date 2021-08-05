@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "clean": "rm -rf .cache dist",
-    "copy-static": "mkdir -p dist && cp -R static/ dist/",
-    "parcel-dev": "parcel src/index.html",
-    "parcel-build": "parcel build src/index.html",
-    "start": "run-s clean copy-static parcel-dev",
-    "build": "run-s clean copy-static parcel-build"
+    "copy:static": "mkdir -p dist && cp -R static/ dist/",
+    "start": "run-s clean copy:static parcel:dev",
+    "build": "run-s clean copy:static parcel:build",
+    "parcel:dev": "parcel src/index.html",
+    "parcel:build": "parcel build src/index.html",
+    "deploy": "surge dist https://wh-tools.surge.sh/"
   },
   "keywords": [],
   "author": "",
