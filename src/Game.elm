@@ -1,19 +1,30 @@
 module Game exposing
     ( Model
+    , Msg
     , init
     , view
     )
 
+import DiscoveryLocation exposing (DiscoveryLocation)
 import Html exposing (..)
 
 
-type alias Model =
-    ()
+type Model
+    = Model State
 
 
-init : Model
+type State
+    = PickDiscoveryLocation DiscoveryLocation
+    | PlayRound Int
+
+
+type Msg
+    = Ignored
+
+
+init : ( Model, Cmd Msg )
 init =
-    ()
+    ( Model (PickDiscoveryLocation DiscoveryLocation.init), Cmd.none )
 
 
 view : Model -> Html msg

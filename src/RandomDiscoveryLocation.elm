@@ -1,7 +1,8 @@
-module RandomDiscoveryLocation exposing (Model, Msg, init, update, view)
+module RandomDiscoveryLocation exposing (Model, Msg(..), init, update, view)
 
 import Array
 import ArrayX
+import Browser.Navigation
 import Buttons
 import Html exposing (..)
 import Html.Attributes as Attr
@@ -80,10 +81,11 @@ type Msg
     = RandomClicked
     | RandomLocationReceived Int Int
     | ShuffleIndexesReceived (List ( Int, Int ))
+    | StartClicked Browser.Navigation.Key
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ((Model state model_data) ) =
+update msg ((Model state model_data) as model ) =
     case msg of
         RandomClicked ->
             Tuple.mapSecond (always <| Cmd.batch <| List.indexedMap generate_next_location <| Array.toList locations) init
@@ -135,6 +137,9 @@ update msg ((Model state model_data) ) =
                 Cmd.batch <| List.indexedMap generate_next_location <| Array.toList locations
             )
 
+        StartClicked key ->
+            ( model, Browser.Navigation.pushUrl key "game" )
+
 
 generate_next_location : Int -> Array.Array Int -> Cmd Msg
 generate_next_location i l =
@@ -151,8 +156,8 @@ generate_shuffle_indexes =
     Random.generate ShuffleIndexesReceived (Random.list (Array.length locations) (Random.pair locations_index_generator locations_index_generator))
 
 
-view : Model -> Html Msg
-view (Model state model_data) =
+view : Browser.Navigation.Key -> Model -> Html Msg
+view key (Model state model_data) =
     div [ Attr.class "h-screen flex flex-col items-center pt-16" ]
         [ h3 [ Attr.class "font-light" ] [ text "Whitehall Mystery Tools" ]
         , h1 [ Attr.class "text-lg text-center font-semibold mb-8" ]
@@ -165,7 +170,10 @@ view (Model state model_data) =
                 [ Attr.classList [ ( "hidden", state /= ReadyToPlay ) ]
                 , Attr.class "mt-8 flex flex-col items-center"
                 ]
-                [ Buttons.with_leading_icon [] Icons.play_solid "Start"
+                [ Buttons.with_leading_icon
+                    [ onClick (StartClicked key) ]
+                    Icons.play_solid
+                    "Start"
                 , p [ Attr.class "font-light italic text-gray-500 mt-2" ]
                     [ text "or try "
                     , span [ Attr.class "font-medium" ] [ text "Random" ]
